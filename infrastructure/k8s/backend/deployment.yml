@@ -1,0 +1,142 @@
+# Kubernetes Deployment Configuration v1.24+
+# Purpose: Production backend microservices deployment with zero-downtime updates,
+# resource management, health monitoring, and secure configuration mounting
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: default
+  labels:
+    app: backend
+    environment: production
+  annotations:
+    # Prometheus monitoring configuration
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+    # Deployment annotations
+    kubernetes.io/change-cause: "Initial deployment"
+    deployment.kubernetes.io/revision: "1"
+
+spec:
+  # High availability configuration with 3 replicas
+  replicas: 3
+  
+  # Zero-downtime rolling update strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Maximum number of pods above desired count
+      maxUnavailable: 0  # Never go below desired pod count during updates
+
+  # Pod selector configuration
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+      annotations:
+        # Pod-level security annotations
+        seccomp.security.alpha.kubernetes.io/pod: "runtime/default"
+        container.apparmor.security.beta.kubernetes.io/backend-api: "runtime/default"
+    
+    spec:
+      # Security context for enhanced pod security
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Container specifications
+      containers:
+      - name: backend-api
+        image: "{{ ECR_REGISTRY }}/backend:{{ IMAGE_TAG }}"
+        imagePullPolicy: Always
+        
+        # Container ports
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+          name: http
+        
+        # Resource requests and limits for predictable performance
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+        
+        # Health monitoring configuration
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Secure configuration mounting
+        envFrom:
+        - configMapRef:
+            name: backend-config
+        - secretRef:
+            name: backend-secrets
+        
+        # Security context for container
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mounts for temporary storage
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+      
+      # Volumes configuration
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      
+      # Pod termination grace period
+      terminationGracePeriodSeconds: 60
+      
+      # Node affinity and anti-affinity rules
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - backend
+              topologyKey: "kubernetes.io/hostname"
+      
+      # Image pull secrets for private registry
+      imagePullSecrets:
+      - name: ecr-registry-secret
