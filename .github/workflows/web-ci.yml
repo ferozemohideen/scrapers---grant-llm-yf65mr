@@ -1,0 +1,150 @@
+# Web Frontend Continuous Integration Workflow
+# Version: 1.0.0
+# Handles build, test, and quality checks for the web application with security scanning
+
+name: Web CI
+
+# Trigger configuration for main/develop branches and pull requests
+on:
+  push:
+    branches: 
+      - main
+      - develop
+    paths:
+      - 'src/web/**'
+    paths-ignore:
+      - '**/*.md'
+      - 'src/web/node_modules/**'
+      - 'src/web/build/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/web/**'
+    paths-ignore:
+      - '**/*.md'
+      - 'src/web/node_modules/**'
+      - 'src/web/build/**'
+
+# Concurrency control to prevent redundant builds
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Environment variables
+env:
+  NODE_VERSION: '16.x'
+  WORKING_DIRECTORY: 'src/web'
+  COVERAGE_THRESHOLD: '80'
+  MAX_PR_SIZE: '500'
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # Checkout repository
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Setup Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      # Cache dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Install dependencies
+      - name: Install dependencies
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm ci
+
+      # Security audit
+      - name: Security audit
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm audit --production --audit-level=high
+
+      # CodeQL Analysis
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+          queries: security-extended
+
+      # Type checking
+      - name: Type check
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run typecheck
+
+      # Linting
+      - name: Lint
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run lint
+        
+      # Unit tests with coverage
+      - name: Test
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run test:coverage
+        env:
+          CI: true
+
+      # Upload coverage reports
+      - name: Upload coverage
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-report
+          path: ${{ env.WORKING_DIRECTORY }}/coverage
+          retention-days: 14
+
+      # Production build
+      - name: Build
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run build
+        env:
+          CI: true
+
+      # Upload build artifacts
+      - name: Upload build
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: ${{ env.WORKING_DIRECTORY }}/build
+          retention-days: 7
+
+      # Perform CodeQL Analysis
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+      # Check bundle size
+      - name: Check bundle size
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          if [ -f "build/asset-manifest.json" ]; then
+            BUNDLE_SIZE=$(du -s build | cut -f1)
+            if [ $BUNDLE_SIZE -gt 5000 ]; then
+              echo "Warning: Bundle size exceeds 5MB threshold"
+              exit 1
+            fi
+          fi
+
+      # Notify on failure
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::CI pipeline failed. Please check the logs for details."
