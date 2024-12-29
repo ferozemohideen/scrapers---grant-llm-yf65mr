@@ -1,0 +1,55 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-ingress
+  namespace: tech-transfer
+  labels:
+    app: web
+    environment: production
+    component: frontend
+  annotations:
+    # Ingress Class and Load Balancer Configuration
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: ${ACM_CERTIFICATE_ARN}
+    
+    # Health Check Configuration
+    alb.ingress.kubernetes.io/healthcheck-path: '/health'
+    alb.ingress.kubernetes.io/success-codes: '200'
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    
+    # Security Configuration
+    alb.ingress.kubernetes.io/security-groups: ${SECURITY_GROUP_IDS}
+    alb.ingress.kubernetes.io/waf-acl-id: ${WAF_ACL_ID}
+    alb.ingress.kubernetes.io/shield-advanced-protection: 'true'
+    
+    # DNS Configuration
+    external-dns.alpha.kubernetes.io/hostname: tech-transfer.com
+    
+    # Monitoring Configuration
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '10254'
+
+spec:
+  # TLS Configuration
+  tls:
+    - hosts:
+        - tech-transfer.com
+      secretName: web-tls-secret
+  
+  # Routing Rules
+  rules:
+    - host: tech-transfer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-service
+                port:
+                  number: 80
