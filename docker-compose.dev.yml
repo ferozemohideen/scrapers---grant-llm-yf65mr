@@ -1,0 +1,105 @@
+version: "3.8"
+
+services:
+  # Backend API Service - Development Configuration
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=tech_transfer_dev
+      - DB_USER=dev
+      - DB_PASSWORD=dev
+      - MONGODB_URI=mongodb://mongodb:27017/tech_transfer_dev
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://dev:dev@rabbitmq:5672
+      - OPENAI_API_KEY=sk-test-key
+    ports:
+      - "3000:3000"
+      - "9229:9229" # Debug port
+    volumes:
+      - ./src/backend:/app
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+      - rabbitmq
+
+  # Frontend Web Application - Development Configuration
+  web:
+    build:
+      context: ./src/web
+      dockerfile: Dockerfile
+      target: development
+      args:
+        VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - "5173:5173" # Vite dev server port
+    volumes:
+      - ./src/web:/app
+      - /app/node_modules
+    command: npm run dev
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+
+  # PostgreSQL Database - Development Configuration
+  postgres:
+    image: postgres:14-alpine # v14.10
+    environment:
+      - POSTGRES_DB=tech_transfer_dev
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+  # MongoDB - Development Configuration
+  mongodb:
+    image: mongo:5.0 # v5.0.24
+    environment:
+      - MONGO_INITDB_DATABASE=tech_transfer_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+
+  # Redis Cache - Development Configuration
+  redis:
+    image: redis:6.2-alpine # v6.2.14
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+
+  # RabbitMQ - Development Configuration
+  rabbitmq:
+    image: rabbitmq:3.11-management # v3.11.28
+    environment:
+      - RABBITMQ_DEFAULT_USER=dev
+      - RABBITMQ_DEFAULT_PASS=dev
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  mongodb_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
