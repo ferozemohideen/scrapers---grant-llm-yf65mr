@@ -1,0 +1,111 @@
+name: Web CD
+
+# Trigger on successful completion of Web CI workflow
+on:
+  workflow_run:
+    workflows: ["Web CI"]
+    types: [completed]
+    branches: [main, develop]
+
+# Environment variables
+env:
+  NODE_VERSION: "16.x"
+  WORKING_DIRECTORY: "src/web"
+  AWS_REGION: "us-east-1"
+
+# Concurrency control to prevent parallel deployments
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    # Only run if CI workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    # Set environment based on branch
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    
+    steps:
+      # Checkout code with optimized fetch
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      # Setup Node.js with caching
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      # Configure AWS credentials using OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      # Cache npm dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Install dependencies with clean install
+      - name: Install dependencies
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm ci --prefer-offline --no-audit
+
+      # Build application with environment-specific variables
+      - name: Build
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_APP_VERSION: ${{ github.sha }}
+        run: npm run build
+
+      # Deploy to S3 with optimal flags
+      - name: Deploy to S3
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} \
+            --delete \
+            --cache-control 'public,max-age=31536000,immutable' \
+            --exclude 'index.html' \
+            --exclude 'manifest.json'
+
+      # Deploy index.html and manifest.json with no-cache
+      - name: Deploy cache-controlled files
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          aws s3 cp dist/index.html s3://${{ secrets.AWS_S3_BUCKET }}/index.html \
+            --cache-control 'public,no-cache,must-revalidate'
+          aws s3 cp dist/manifest.json s3://${{ secrets.AWS_S3_BUCKET }}/manifest.json \
+            --cache-control 'public,no-cache,must-revalidate'
+
+      # Invalidate CloudFront cache
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      # Notify deployment status
+      - name: Notify deployment status
+        if: always()
+        run: |
+          ENVIRONMENT="${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
+          STATUS="${{ job.status }}"
+          echo "::notice::Deployment to ${ENVIRONMENT} ${STATUS}"
