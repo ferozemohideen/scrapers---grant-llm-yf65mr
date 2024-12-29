@@ -1,0 +1,94 @@
+# Jaeger Configuration v1.35.0
+# Purpose: Distributed tracing configuration for technology transfer data aggregation system
+# Dependencies: jaegertracing/all-in-one:1.35.0
+
+version: "1.35.0"
+disabled: false
+
+# Reporter configuration for sending spans to collectors
+reporter:
+  grpc:
+    host-port: "jaeger-collector:14250"  # gRPC collector endpoint
+  log-spans: true  # Enable span logging for debugging
+  queue-size: 100000  # Large queue to handle traffic spikes
+  flush-interval: "1s"  # Frequent flushing for near real-time tracing
+
+# Sampling configuration for trace collection
+sampler:
+  type: "probabilistic"  # Probabilistic sampling for consistent collection
+  param: 1.0  # 100% sampling rate for comprehensive monitoring
+  options:
+    sampling.strategies-file: "/etc/jaeger/sampling_strategies.json"
+
+# Storage configuration using Elasticsearch for scalability
+storage:
+  type: "elasticsearch"
+  options:
+    es:
+      server-urls: "http://elasticsearch:9200"
+      index-prefix: "jaeger"
+      num-shards: 5  # Sharding for performance
+      num-replicas: 1  # Replication for reliability
+
+# Query service configuration for trace analysis
+query:
+  port: 16686  # Default Jaeger UI port
+  base-path: "/jaeger"  # Base path for UI access
+
+# Collector configuration for receiving traces
+collector:
+  zipkin:  # Zipkin compatibility layer
+    host-port: ":9411"
+  queue-size: 100000  # Large queue for high throughput
+  batch-size: 1000  # Efficient batch processing
+  batch-timeout: "1s"  # Regular batch processing
+
+# Global environment variables
+env:
+  - name: COLLECTOR_ZIPKIN_HOST_PORT
+    value: ":9411"
+  - name: SAMPLING_STRATEGIES_FILE
+    value: "/etc/jaeger/sampling_strategies.json"
+
+# Additional configuration options
+logging:
+  level: "info"
+
+# Health check configuration
+health:
+  http:
+    port: 14269
+
+# Metrics configuration for monitoring Jaeger itself
+metrics:
+  backend: "prometheus"
+  prometheus:
+    server-url: "http://prometheus:9090"
+
+# Resource limits to prevent overload
+resources:
+  memory:
+    max: "1Gi"
+  cpu:
+    max: "1.0"
+
+# Tags for trace correlation
+process:
+  tags:
+    service.name: "tech-transfer-system"
+    deployment.environment: "production"
+
+# OTLP configuration for OpenTelemetry support
+otlp:
+  enabled: true
+  grpc:
+    host-port: ":4317"
+  http:
+    host-port: ":4318"
+
+# Security configuration
+tls:
+  enabled: true
+  cert: "/etc/jaeger/cert/cert.pem"
+  key: "/etc/jaeger/cert/key.pem"
+  ca: "/etc/jaeger/cert/ca.pem"
