@@ -1,0 +1,241 @@
+version: "3.8"
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-1.0.0}
+    image: tech-transfer-backend:${TAG:-latest}
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=tech_transfer
+      - DB_USER=postgres
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - MONGODB_URI=mongodb://mongodb:27017/tech_transfer
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD_FILE=/run/secrets/rabbitmq_password
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key
+    ports:
+      - "3000:3000"
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app_net
+      - monitoring
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    secrets:
+      - db_password
+      - rabbitmq_password
+      - openai_api_key
+
+  # Frontend Web Application
+  web:
+    build:
+      context: ./src/web
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_BASE_URL: http://backend:3000
+        BUILD_VERSION: ${BUILD_VERSION:-1.0.0}
+    image: tech-transfer-web:${TAG:-latest}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app_net
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: tech_transfer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app_net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    secrets:
+      - db_password
+
+  # MongoDB Document Store
+  mongodb:
+    image: mongo:5.0
+    environment:
+      MONGO_INITDB_DATABASE: tech_transfer
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - app_net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:6.2-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - app_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.11-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app_net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    secrets:
+      - rabbitmq_password
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /data/postgres
+      o: bind
+  mongodb_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /data/mongodb
+      o: bind
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /data/redis
+      o: bind
+
+networks:
+  app_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+    driver_opts:
+      encrypted: "true"
+  monitoring:
+    external: true
+    name: monitoring_network
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  rabbitmq_password:
+    file: ./secrets/rabbitmq_password.txt
+  openai_api_key:
+    file: ./secrets/openai_api_key.txt
