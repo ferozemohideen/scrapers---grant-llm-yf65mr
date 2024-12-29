@@ -1,0 +1,108 @@
+# Elasticsearch 8.x Configuration
+# Purpose: Core configuration for technology transfer data aggregation system's logging and search capabilities
+
+# Cluster Configuration
+cluster:
+  name: tech-transfer-logs
+  initial_master_nodes: ["es01"]
+  routing:
+    allocation:
+      disk:
+        threshold_enabled: true
+        watermark:
+          low: "85%"    # Issue warning
+          high: "90%"   # Relocate shards
+          flood_stage: "95%"  # Enforce read-only indices
+
+# Node Configuration
+node:
+  name: es01
+  roles: ["master", "data", "ingest"]
+  max_local_storage_nodes: 1
+  attr:
+    rack_id: rack1
+
+# Path Settings
+path:
+  data: /usr/share/elasticsearch/data
+  logs: /usr/share/elasticsearch/logs
+
+# Network Settings
+network:
+  host: 0.0.0.0  # Listen on all interfaces
+  port: 9200
+  publish_host: elasticsearch  # Docker service name
+
+# Discovery Configuration
+discovery:
+  type: single-node  # Single node deployment
+  seed_hosts: ["elasticsearch"]
+
+# HTTP Settings
+http:
+  port: 9200
+  compression: true  # Enable compression for better performance
+  cors:
+    enabled: true
+    allow-origin: ["*"]  # Configure as needed for production
+
+# Security Settings (X-Pack)
+xpack:
+  security:
+    enabled: true
+    authc:
+      api_key:
+        enabled: true  # Enable API key authentication
+      token:
+        enabled: true  # Enable token authentication
+    transport:
+      ssl:
+        enabled: true  # Enable SSL for transport layer
+  monitoring:
+    collection:
+      enabled: true  # Enable monitoring collection
+
+# Index Settings
+indices:
+  memory:
+    index_buffer_size: "10%"  # Optimize for write performance
+  recovery:
+    max_bytes_per_sec: "40mb"  # Control recovery speed
+
+# Bootstrap Settings
+bootstrap:
+  memory_lock: true  # Prevent memory swapping
+
+# System Limits and Memory
+# Note: These are typically set via environment variables
+# ES_JAVA_OPTS: "-Xms2g -Xmx2g"
+# bootstrap.memory_lock: true
+# ELASTIC_USERNAME: ${ELASTIC_USERNAME}
+# ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+
+# Additional Settings for Production
+action.destructive_requires_name: true  # Prevent accidental deletions
+search.max_buckets: 10000  # Limit aggregation size
+thread_pool:
+  write:
+    queue_size: 1000  # Optimize write queue
+  search:
+    queue_size: 1000  # Optimize search queue
+
+# Monitoring Settings
+monitoring:
+  collection:
+    enabled: true
+    interval: 10s  # Collection interval
+    cluster:
+      state:
+        timeout: 10s
+
+# Recovery Settings
+gateway:
+  recover_after_nodes: 1
+  recover_after_time: "5m"
+  expected_nodes: 1
+
+# Snapshot Settings
+path.repo: "/usr/share/elasticsearch/snapshots"  # Path for snapshots
