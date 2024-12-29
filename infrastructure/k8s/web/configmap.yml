@@ -1,0 +1,64 @@
+# Kubernetes ConfigMap for Web Frontend Application
+# Version: v1
+# Purpose: Define environment variables and runtime configurations
+# Dependencies: kubernetes v1.24+
+# References:
+# - deployment.yml: Uses this ConfigMap for environment injection
+# - .env.example: Template for environment variables
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-config
+  namespace: tech-transfer
+  labels:
+    app: web
+    environment: production
+    component: frontend
+    managed-by: kubernetes
+  annotations:
+    description: "Web frontend configuration for Tech Transfer System"
+    version: "1.0.0"
+    last-updated: "2024-02-20"
+
+data:
+  # API Gateway Configuration
+  # Required for frontend-backend communication
+  VITE_API_BASE_URL: "http://api-gateway:8000"
+  VITE_API_VERSION: "v1"
+
+  # Authentication Token Storage Keys
+  # Note: These are only key names, not actual tokens
+  VITE_AUTH_TOKEN_KEY: "auth_token"
+  VITE_REFRESH_TOKEN_KEY: "refresh_token"
+  VITE_TOKEN_EXPIRY_KEY: "token_expiry"
+
+  # Monitoring and Observability Settings
+  # Health check and monitoring configuration
+  VITE_MONITORING_INTERVAL: "30000"
+  VITE_MONITORING_ENABLED: "true"
+
+  # Application Environment Settings
+  # Runtime configuration for the application
+  VITE_ENVIRONMENT: "production"
+  VITE_LOG_LEVEL: "info"
+  VITE_MAX_RETRIES: "3"
+
+  # Feature Flags and Additional Settings
+  # Can be extended based on requirements
+  VITE_FEATURE_FLAGS: |
+    {
+      "enableMetrics": true,
+      "enableErrorTracking": true,
+      "enablePerformanceMonitoring": true
+    }
+
+  # Validation Rules
+  # JSON schema for runtime configuration validation
+  VITE_VALIDATION_RULES: |
+    {
+      "apiVersion": "Must be v1",
+      "monitoringInterval": "Must be between 5000-60000ms",
+      "logLevel": "Must be one of: debug,info,warn,error",
+      "maxRetries": "Must be between 1-5"
+    }
