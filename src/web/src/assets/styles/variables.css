@@ -1,0 +1,170 @@
+/* Core Design System Variables
+ * Version: 1.0.0
+ * 
+ * This file defines the foundational design tokens and variables that power
+ * the application's visual language. It includes comprehensive systems for:
+ * - Colors
+ * - Typography
+ * - Spacing
+ * - Layout
+ * - Animations
+ * - Accessibility
+ */
+
+:root {
+  /* Color System - Base Colors */
+  --primary-color: #2563eb;
+  --primary-color-light: #60a5fa;
+  --primary-color-dark: #1d4ed8;
+  --secondary-color: #64748b;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+
+  /* Color System - Text */
+  --text-color: #1f2937;
+  --text-color-light: #6b7280;
+  --text-color-disabled: #9ca3af;
+
+  /* Color System - Background */
+  --background-color: #ffffff;
+  --background-color-dark: #f3f4f6;
+  --background-color-disabled: #e5e7eb;
+
+  /* Color System - Utility */
+  --border-color: #e5e7eb;
+  --focus-ring-color: rgba(37, 99, 235, 0.5);
+  --overlay-color: rgba(0, 0, 0, 0.5);
+  --tooltip-background: #1f2937;
+
+  /* Typography - Font Families */
+  --font-family-base: system-ui, -apple-system, sans-serif;
+  --font-family-mono: ui-monospace, monospace;
+
+  /* Typography - Font Sizes */
+  --font-size-base: 16px;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+
+  /* Typography - Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Typography - Line Heights */
+  --line-height-base: 1.5;
+  --line-height-tight: 1.25;
+  --line-height-relaxed: 1.75;
+
+  /* Typography - Letter Spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+
+  /* Spacing System */
+  --spacing-unit: 4px;
+  --spacing-1: var(--spacing-unit);
+  --spacing-2: calc(var(--spacing-unit) * 2);
+  --spacing-3: calc(var(--spacing-unit) * 3);
+  --spacing-4: calc(var(--spacing-unit) * 4);
+  --spacing-6: calc(var(--spacing-unit) * 6);
+  --spacing-8: calc(var(--spacing-unit) * 8);
+  --spacing-12: calc(var(--spacing-unit) * 12);
+  --spacing-16: calc(var(--spacing-unit) * 16);
+
+  /* Layout - Breakpoints */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --container-max-width: 1200px;
+
+  /* Layout - Border Radius */
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.375rem;
+  --border-radius-lg: 0.5rem;
+  --border-radius-full: 9999px;
+
+  /* Layout - Z-Index Stack */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal: 1040;
+  --z-index-tooltip: 1050;
+
+  /* Animation System - Transitions */
+  --transition-base: all 0.2s ease-in-out;
+  --transition-fast: all 0.1s ease-in-out;
+  --transition-slow: all 0.3s ease-in-out;
+
+  /* Animation System - Easing */
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Animation System - Durations */
+  --duration-instant: 50ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+
+  /* Accessibility Features */
+  --focus-ring: 0 0 0 3px var(--focus-ring-color);
+  --skip-link-top: var(--spacing-4);
+  --skip-link-left: var(--spacing-4);
+  --screen-reader-text-height: 1px;
+  --screen-reader-text-width: 1px;
+  --high-contrast-border: 2px solid currentColor;
+}
+
+/* Dark Theme Override */
+[data-theme='dark'] {
+  --text-color: #f3f4f6;
+  --text-color-light: #9ca3af;
+  --text-color-disabled: #6b7280;
+  --background-color: #1f2937;
+  --background-color-dark: #111827;
+  --background-color-disabled: #374151;
+  --border-color: #374151;
+  --focus-ring-color: rgba(96, 165, 250, 0.5);
+  --overlay-color: rgba(0, 0, 0, 0.75);
+  --tooltip-background: #f3f4f6;
+}
+
+/* High Contrast Mode Override */
+[data-high-contrast='true'] {
+  --primary-color: #0000ff;
+  --error-color: #ff0000;
+  --text-color: #000000;
+  --background-color: #ffffff;
+  --border-color: #000000;
+  --focus-ring-color: #0000ff;
+}
+
+/* System Dark Mode Preference */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-color: #f3f4f6;
+    --text-color-light: #9ca3af;
+    --background-color: #1f2937;
+    --background-color-dark: #111827;
+    --border-color: #374151;
+  }
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-base: none;
+    --transition-fast: none;
+    --transition-slow: none;
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+  }
+}
