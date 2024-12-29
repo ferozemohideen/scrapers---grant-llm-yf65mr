@@ -1,0 +1,59 @@
+# Kubernetes HPA configuration for backend service
+# API Version: autoscaling/v2 (Kubernetes 1.24+)
+# Purpose: Defines automatic scaling rules based on CPU and memory metrics
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: default
+  labels:
+    app: backend
+    environment: production
+    component: autoscaler
+
+spec:
+  # Target the backend deployment for scaling
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend-deployment
+
+  # Scaling limits
+  minReplicas: 3  # Ensures high availability with minimum 3 replicas
+  maxReplicas: 10 # Prevents resource exhaustion while allowing scalability
+
+  # Resource utilization metrics for scaling decisions
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70  # Scale when CPU utilization exceeds 70%
+
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80  # Scale when memory utilization exceeds 80%
+
+  # Scaling behavior configuration
+  behavior:
+    # Scale up configuration - aggressive scaling for rapid response
+    scaleUp:
+      stabilizationWindowSeconds: 60  # Wait 60s before additional scale up
+      policies:
+        - type: Pods
+          value: 2                    # Add up to 2 pods per scaling event
+          periodSeconds: 60           # Scaling period of 60 seconds
+
+    # Scale down configuration - conservative scaling to prevent thrashing
+    scaleDown:
+      stabilizationWindowSeconds: 300 # Wait 300s before scale down
+      policies:
+        - type: Pods
+          value: 1                    # Remove 1 pod per scaling event
+          periodSeconds: 60           # Scaling period of 60 seconds
