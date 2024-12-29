@@ -1,0 +1,66 @@
+# Logstash 8.x Configuration for Kubernetes
+# Purpose: Centralized log aggregation and processing for technology transfer data system
+
+# Node Configuration
+node:
+  name: ${POD_NAME}  # Dynamic name based on K8s pod name
+  roles: 
+    - collector
+    - processor
+
+# Path Configuration
+path:
+  data: /usr/share/logstash/data    # Persistent data storage
+  logs: /usr/share/logstash/logs    # Log files location
+  config: /usr/share/logstash/config  # Configuration directory
+  pipeline: /usr/share/logstash/pipeline  # Pipeline definitions
+
+# Pipeline Settings
+pipeline:
+  workers: 4  # Number of pipeline workers for parallel processing
+  batch:
+    size: 125  # Process events in batches of 125
+    delay: 50  # 50ms delay between batches
+  ordered: true  # Maintain event ordering
+
+# Monitoring Configuration
+monitoring:
+  enabled: true  # Enable Logstash monitoring
+  elasticsearch:  # Elasticsearch monitoring backend
+    hosts: ["http://elasticsearch-service:9200"]
+    username: ${ELASTIC_USERNAME}
+    password: ${ELASTIC_PASSWORD}
+
+# Queue Settings
+queue:
+  type: persisted  # Persistent queue for durability
+  max_bytes: 2gb   # Maximum queue size
+
+# Logging Configuration
+log:
+  level: info  # Default log level
+  format:
+    type: json  # JSON formatted logs for better parsing
+
+# Config Reload Settings
+config:
+  reload:
+    automatic: true  # Enable automatic config reloading
+    interval: 3  # Check for changes every 3 seconds
+
+# API Settings
+api:
+  enabled: true  # Enable Logstash monitoring API
+  host: "0.0.0.0"  # Listen on all interfaces
+  port: 9600  # API port
+
+# HTTP Settings
+http:
+  host: "0.0.0.0"  # Listen on all interfaces
+  port: 9600  # HTTP port
+
+# Environment Variables (referenced in Kubernetes deployment)
+# LS_JAVA_OPTS: "-Xms2g -Xmx2g"
+# ELASTIC_USERNAME: ${ELASTIC_USERNAME}
+# ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+# POD_NAME: ${POD_NAME}
