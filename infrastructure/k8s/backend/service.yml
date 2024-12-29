@@ -1,0 +1,50 @@
+# Kubernetes Service Configuration v1.24+
+# Purpose: Exposes backend API microservices with internal load balancing and monitoring integration
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: backend-service
+  namespace: default
+  labels:
+    app: backend
+    environment: production
+    component: api
+    managed-by: kubernetes
+  annotations:
+    # Prometheus monitoring integration
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+    # AWS load balancer configuration
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+
+spec:
+  # Internal cluster service type for security
+  type: ClusterIP
+  
+  # Port mappings for API and metrics traffic
+  ports:
+    # Main API traffic port
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+    
+    # Prometheus metrics port
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: metrics
+  
+  # Pod selection criteria using strict label matching
+  selector:
+    app: backend
+    component: api
+  
+  # Session handling configuration
+  sessionAffinity: None
+  
+  # Health awareness configuration
+  publishNotReadyAddresses: false
