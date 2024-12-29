@@ -1,0 +1,92 @@
+# Kibana 8.x Configuration
+# This configuration file sets up Kibana as the visualization and management interface
+# for the technology transfer data aggregation system monitoring
+
+# Server configuration
+server:
+  name: "kibana01"
+  host: "0.0.0.0"
+  port: 5601
+  publicBaseUrl: ${KIBANA_PUBLIC_URL}
+  rewriteBasePath: true
+  maxPayloadBytes: 10485760  # 10MB max payload size
+
+# Elasticsearch connection settings
+elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: ${ELASTIC_USERNAME}
+  password: ${ELASTIC_PASSWORD}
+  requestTimeout: 30000  # 30 second timeout
+  ssl:
+    verificationMode: "certificate"
+    certificateAuthorities: ["/etc/kibana/certs/ca.crt"]
+  pingTimeout: 5000  # 5 second ping timeout
+  maxRetries: 3
+
+# Monitoring configuration
+monitoring:
+  ui:
+    container:
+      elasticsearch:
+        enabled: true
+        annotations:
+          performance_threshold: "2s"  # Supports sub-2 second response time monitoring
+          uptime_target: "99.9"       # Tracks 99.9% uptime requirement
+      logstash:
+        enabled: true
+  kibana:
+    collection:
+      enabled: true
+      interval: "10s"  # Collect metrics every 10 seconds
+
+# Security and feature configuration
+xpack:
+  security:
+    enabled: true
+    encryptionKey: ${ENCRYPTION_KEY}
+    session:
+      idleTimeout: "1h"
+      lifespan: "24h"
+      cleanupInterval: "1h"
+    audit:
+      enabled: true  # Enable security audit logging
+  
+  reporting:
+    enabled: true
+    capture:
+      maxAttempts: 3
+      timeouts:
+        waitForElements: 30000
+        renderComplete: 30000
+      loadDelay: 3000
+    csv:
+      maxSizeBytes: 10485760  # 10MB max CSV size
+      scroll:
+        duration: "30s"
+        size: 500
+
+# Logging configuration
+logging:
+  appenders:
+    file:
+      type: "file"
+      fileName: "/var/log/kibana/kibana.log"
+      layout:
+        type: "json"
+      rotateInterval: "1d"
+      maxLogSize: "100mb"
+      keepFileExt: true
+  root:
+    appenders: ["file"]
+    level: "info"
+
+# Node.js memory limit
+node:
+  options: "--max-old-space-size=1800"  # 1.8GB memory limit
+
+# Environment variable references
+# ELASTIC_USERNAME - Elasticsearch authentication username
+# ELASTIC_PASSWORD - Elasticsearch authentication password
+# ENCRYPTION_KEY - Security encryption key
+# KIBANA_PUBLIC_URL - Public URL for Kibana access
+# KIBANA_MEMORY_LIMIT=1800MB - Memory limit for Kibana process
