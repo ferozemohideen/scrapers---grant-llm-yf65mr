@@ -1,0 +1,60 @@
+# Logstash Configuration
+# Version: 8.x
+# Purpose: Core configuration for log collection and processing service
+
+# Node identification
+node:
+  name: logstash01
+  roles: ["collector", "processor"]
+
+# Path configuration
+path:
+  data: /usr/share/logstash/data
+  logs: /usr/share/logstash/logs
+  config: /usr/share/logstash/config
+  pipeline: /usr/share/logstash/pipeline
+
+# Pipeline settings
+pipeline:
+  workers: 4  # Number of pipeline workers for parallel processing
+  batch:
+    size: 125  # Process events in batches of 125
+    delay: 50  # Wait up to 50ms to fill a batch
+  ordered: true  # Maintain event ordering
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  elasticsearch:
+    hosts: ["http://elasticsearch:9200"]
+    username: ${ELASTIC_USERNAME}
+    password: ${ELASTIC_PASSWORD}
+
+# Queue settings
+queue:
+  type: persisted  # Persistent queue for durability
+  max_bytes: 1gb   # Maximum queue size
+
+# Logging configuration
+log:
+  level: info
+  format:
+    type: json  # JSON formatted logs for better parsing
+
+# Configuration reloading
+config:
+  reload:
+    automatic: true
+    interval: 3  # Check for config changes every 3 seconds
+
+# API settings
+api:
+  enabled: true
+  host: "0.0.0.0"  # Listen on all interfaces
+  port: 9600       # API port for monitoring and management
+
+# Environment variable references
+# Required env vars:
+# - ELASTIC_USERNAME: Elasticsearch authentication username
+# - ELASTIC_PASSWORD: Elasticsearch authentication password
+# - LS_JAVA_OPTS: "-Xms1g -Xmx1g"  # JVM heap size configuration
