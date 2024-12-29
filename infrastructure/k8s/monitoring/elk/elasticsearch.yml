@@ -1,0 +1,154 @@
+# Elasticsearch StatefulSet Configuration for Tech Transfer Data Aggregation System
+# Version: 8.9.0
+# Purpose: Production-grade Elasticsearch deployment for centralized logging infrastructure
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: monitoring
+  labels:
+    app: elasticsearch
+    component: logging
+spec:
+  # Use headless service for stable network identities
+  serviceName: elasticsearch
+  # Single node deployment as specified in globals
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      # Security context for the pod
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      
+      # Init containers for system preparation
+      initContainers:
+        # Set correct permissions on data directory
+        - name: fix-permissions
+          image: busybox
+          command: ['sh', '-c', 'chown -R 1000:1000 /usr/share/elasticsearch/data']
+          volumeMounts:
+            - name: elasticsearch-data
+              mountPath: /usr/share/elasticsearch/data
+        
+        # Configure system settings for Elasticsearch
+        - name: increase-vm-max-map
+          image: busybox
+          command: ['sysctl', '-w', 'vm.max_map_count=262144']
+          securityContext:
+            privileged: true
+
+      # Main Elasticsearch container
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+          
+          # Expose HTTP and Transport ports
+          ports:
+            - containerPort: 9200
+              protocol: TCP
+              name: http
+            - containerPort: 9300
+              protocol: TCP
+              name: transport
+          
+          # Environment configuration
+          env:
+            - name: cluster.name
+              value: tech-transfer-logs
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: discovery.type
+              value: single-node
+            - name: ES_JAVA_OPTS
+              value: "-Xms2g -Xmx2g"
+            - name: xpack.security.enabled
+              value: "true"
+            # Additional security settings
+            - name: xpack.monitoring.enabled
+              value: "true"
+            - name: xpack.security.transport.ssl.enabled
+              value: "true"
+            
+          # Resource limits and requests
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "4Gi"
+            limits:
+              cpu: "2000m"
+              memory: "8Gi"
+          
+          # Volume mounts
+          volumeMounts:
+            - name: elasticsearch-data
+              mountPath: /usr/share/elasticsearch/data
+          
+          # Readiness probe
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          
+          # Liveness probe
+          livenessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            timeoutSeconds: 5
+
+      # Pod anti-affinity to avoid multiple pods on same node
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: elasticsearch
+                topologyKey: kubernetes.io/hostname
+
+  # Persistent volume claim template
+  volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 100Gi
+        storageClassName: standard
+
+---
+# Headless service for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: monitoring
+  labels:
+    app: elasticsearch
+    component: logging
+spec:
+  clusterIP: None
+  ports:
+    - port: 9200
+      name: http
+    - port: 9300
+      name: transport
+  selector:
+    app: elasticsearch
