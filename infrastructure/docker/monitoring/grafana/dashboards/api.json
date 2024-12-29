@@ -1,0 +1,252 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "api-monitoring-v2",
+    "title": "API Performance Dashboard",
+    "tags": ["api", "performance", "monitoring", "sla"],
+    "timezone": "browser",
+    "refresh": "10s",
+    "schemaVersion": 36,
+    "version": 2,
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate by Endpoint",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "description": "API request rate per second by method and path",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"api-gateway\",environment=~\"$env\"}[5m])) by (method, path)",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ],
+        "alert": {
+          "name": "High Request Rate",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [1000]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              }
+            }
+          ],
+          "notifications": []
+        },
+        "yaxes": [
+          {
+            "format": "reqps",
+            "label": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Response Time Distribution",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "description": "95th percentile response times with 2s SLA threshold",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"api-gateway\",environment=~\"$env\"}[5m])) by (le, path))",
+            "legendFormat": "p95 {{path}}"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"api-gateway\",environment=~\"$env\"}[5m])) by (le, path))",
+            "legendFormat": "p99 {{path}}"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 2,
+            "colorMode": "critical",
+            "op": "gt",
+            "fill": true,
+            "line": true,
+            "yaxis": "left"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Response Time",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate Percentage",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "description": "Percentage of 5xx errors with 1% threshold alert",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"api-gateway\",status=~\"5..\",environment=~\"$env\"}[5m])) / sum(rate(http_requests_total{job=\"api-gateway\",environment=~\"$env\"}[5m])) * 100",
+            "legendFormat": "Error %"
+          }
+        ],
+        "alert": {
+          "name": "High Error Rate",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [1]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              }
+            }
+          ],
+          "notifications": []
+        },
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Error Rate",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Resource Usage",
+        "type": "row",
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        },
+        "panels": [
+          {
+            "id": 5,
+            "title": "CPU Usage",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "description": "API service CPU utilization percentage",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 17
+            },
+            "targets": [
+              {
+                "expr": "avg(rate(process_cpu_seconds_total{job=\"api-gateway\",environment=~\"$env\"}[5m])) * 100",
+                "legendFormat": "CPU %"
+              }
+            ],
+            "thresholds": [
+              {
+                "value": 70,
+                "colorMode": "warning"
+              },
+              {
+                "value": 85,
+                "colorMode": "critical"
+              }
+            ],
+            "format": "percent",
+            "min": 0,
+            "max": 100
+          },
+          {
+            "id": 6,
+            "title": "Memory Usage",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "description": "API service memory usage in MB",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 17
+            },
+            "targets": [
+              {
+                "expr": "avg(process_resident_memory_bytes{job=\"api-gateway\",environment=~\"$env\"}) / 1024 / 1024",
+                "legendFormat": "Memory (MB)"
+              }
+            ],
+            "thresholds": [
+              {
+                "value": 2048,
+                "colorMode": "warning"
+              },
+              {
+                "value": 3072,
+                "colorMode": "critical"
+              }
+            ],
+            "format": "mbytes",
+            "min": 0
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "env",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(http_requests_total, environment)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": false,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "changes(process_start_time_seconds{job=\"api-gateway\",environment=~\"$env\"}[5m])",
+          "enable": true,
+          "iconColor": "#5794F2",
+          "tags": ["deployment"]
+        }
+      ]
+    }
+  }
+}
