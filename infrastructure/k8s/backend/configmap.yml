@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: tech-transfer
+  labels:
+    app: tech-transfer
+    component: backend
+    environment: production
+data:
+  # Database Configuration
+  database-config: |
+    postgres:
+      host: postgres-service
+      port: 5432
+      database: tech_transfer
+      maxConnections: 100
+      poolConfig:
+        minConnections: 10
+        idleTimeoutMs: 30000
+        connectionTimeoutMs: 5000
+    mongodb:
+      database: tech_transfer_docs
+      options:
+        maxPoolSize: 50
+        wtimeoutMS: 2500
+        useUnifiedTopology: true
+        retryWrites: true
+        readPreference: primaryPreferred
+    redis:
+      host: redis-service
+      port: 6379
+      ttl: 3600
+      maxMemoryPolicy: allkeys-lru
+      maxMemoryMB: 512
+
+  # Scraper Configuration
+  scraper-config: |
+    engines:
+      beautiful_soup:
+        maxConcurrency: 5
+        timeout: 30000
+        retryAttempts: 3
+        retryDelayMs: 1000
+      scrapy:
+        maxConcurrency: 10
+        timeout: 60000
+        retryAttempts: 3
+        retryDelayMs: 2000
+      selenium:
+        maxConcurrency: 3
+        timeout: 45000
+        retryAttempts: 2
+        retryDelayMs: 5000
+    rateLimits:
+      us_universities:
+        requestsPerSecond: 2
+        burstLimit: 5
+        cooldownPeriod: 60
+      international_universities:
+        requestsPerSecond: 1
+        burstLimit: 3
+        cooldownPeriod: 120
+      federal_labs:
+        requestsPerSecond: 5
+        burstLimit: 10
+        cooldownPeriod: 30
+
+  # Search Configuration
+  search-config: |
+    elasticsearch:
+      node: elasticsearch-service:9200
+      indices:
+        technology:
+          name: technology_index
+          settings:
+            numberOfShards: 3
+            numberOfReplicas: 2
+            refreshInterval: "1s"
+            indexBufferSize: "512mb"
+        proposals:
+          name: proposals_index
+          settings:
+            numberOfShards: 2
+            numberOfReplicas: 1
+            refreshInterval: "2s"
+            indexBufferSize: "256mb"
+      queryConfig:
+        timeout: 1000
+        trackTotalHits: true
+        allowPartialSearchResults: false
+    cache:
+      enabled: true
+      ttl: 3600
+      maxSize: 10000
+      keyPrefix: "search:"
+      strategy: "lru"
+      monitoring:
+        enabled: true
+        statsInterval: 300
+    search:
+      maxResults: 100
+      defaultPageSize: 20
+      minScore: 0.3
+      weights:
+        title: 2.0
+        description: 1.0
+        institution: 1.5
+        tags: 1.2
+      facets:
+        enabled: true
+        fields:
+          - institution
+          - category
+          - tags
+        maxValuesPerFacet: 50
+      highlighting:
+        enabled: true
+        fragmentSize: 150
+        numberOfFragments: 3
+    monitoring:
+      metrics:
+        enabled: true
+        interval: 60
+        retention: 604800
+      alerts:
+        responseTimeThresholdMs: 2000
+        errorRateThreshold: 0.05
+        healthCheckInterval: 30
