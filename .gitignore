@@ -1,0 +1,46 @@
+# Exclude all environment files containing sensitive configuration
+*.env
+.env.*
+!.env.example
+
+# Dependencies
+# Node.js package directories
+node_modules/
+
+# Build Outputs
+# Distribution and build directories
+dist/
+build/
+# Test coverage reports
+coverage/
+
+# Logs and Temporary Files
+# Log files and temporary data
+*.log
+tmp/
+*.tmp
+
+# System Files
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Security and Certificates
+# Security-related files and certificates
+*.pem
+*.key
+*.cert
+
+# Infrastructure
+# Terraform and infrastructure configuration
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.example.tfvars
+
+# IDE and Editor Files
+# Editor-specific directories and files
+.idea/
+.vscode/
+*.swp
