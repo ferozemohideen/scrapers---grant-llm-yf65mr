@@ -1,0 +1,89 @@
+node_modules
+package-lock.json
+yarn.lock
+
+# Build artifacts
+dist
+build
+*.tsbuildinfo
+
+# Test artifacts
+tests
+coverage
+.nyc_output
+__tests__
+*.test.js
+*.spec.js
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Security and credentials
+.env*
+*.key
+*.pem
+.aws
+.ssh
+credentials
+*secret*
+*password*
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+.editorconfig
+
+# Logs and debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+
+# Documentation
+docs
+*.md
+swagger.json
+api-docs
+README*
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary and cache files
+tmp
+.temp
+*.tmp
+.cache
+*.cache
+
+# Archives and compressed files
+*.tar
+*.gz
+*.zip
+*.rar
+*.7z
+
+# Development tools
+.eslintrc*
+.prettierrc*
+.babelrc*
+jest.config.*
+tsconfig.*
+nodemon.json
+.dockerignore
+Dockerfile*
+
+# Miscellaneous
+.husky
+.github
+*.csv
+*.xls*
+*.pdf
+.env.example
