@@ -1,0 +1,146 @@
+# Jaeger Deployment Configuration v1.35.0
+# Purpose: Production deployment of Jaeger distributed tracing system with Elasticsearch backend
+# Dependencies:
+# - jaegertracing/all-in-one:1.35.0
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: monitoring
+  labels:
+    app: jaeger
+    component: tracing
+    version: "1.35.0"
+    part-of: observability
+spec:
+  # Single replica as Jaeger all-in-one is not designed for HA
+  replicas: 1
+  
+  # Configure zero-downtime updates
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+      
+  # Pod selector matching
+  selector:
+    matchLabels:
+      app: jaeger
+      
+  template:
+    metadata:
+      labels:
+        app: jaeger
+        component: tracing
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "16686"
+        
+    spec:
+      # Security context for the pod
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+        
+      containers:
+      - name: jaeger
+        image: jaegertracing/all-in-one:1.35.0
+        imagePullPolicy: IfNotPresent
+        
+        # Expose required ports
+        ports:
+        - containerPort: 16686
+          name: query
+          protocol: TCP
+        - containerPort: 14250
+          name: grpc
+          protocol: TCP
+        - containerPort: 9411
+          name: zipkin
+          protocol: TCP
+        
+        # Resource limits and requests
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+            
+        # Environment configuration
+        env:
+        - name: SPAN_STORAGE_TYPE
+          value: "elasticsearch"
+        - name: ES_SERVER_URLS
+          value: "http://elasticsearch:9200"
+        - name: ES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: elasticsearch-credentials
+              key: username
+        - name: ES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: elasticsearch-credentials
+              key: password
+        - name: COLLECTOR_ZIPKIN_HOST_PORT
+          value: ":9411"
+        - name: SAMPLING_STRATEGIES_FILE
+          value: "/etc/jaeger/sampling.json"
+        - name: METRICS_STORAGE_TYPE
+          value: "prometheus"
+        
+        # Health checks
+        readinessProbe:
+          httpGet:
+            path: "/"
+            port: 16686
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: 16686
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          
+        # Volume mounts for configuration
+        volumeMounts:
+        - name: jaeger-sampling-config
+          mountPath: /etc/jaeger
+          readOnly: true
+          
+      # Volumes definition  
+      volumes:
+      - name: jaeger-sampling-config
+        configMap:
+          name: jaeger-sampling-config
+          
+      # Node affinity to ensure proper placement
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/role
+                operator: In
+                values:
+                - monitoring
+                
+      # Tolerations for monitoring nodes
+      tolerations:
+      - key: "monitoring"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
