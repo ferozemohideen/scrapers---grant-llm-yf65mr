@@ -1,0 +1,64 @@
+# Grafana v9.5.0 Datasources Configuration
+# Configures optimized connections to Prometheus, Elasticsearch, and Jaeger
+# for comprehensive system observability with sub-2 second response times
+
+apiVersion: 1
+
+# Datasource definitions for metrics, logs, and traces
+datasources:
+  # Prometheus datasource for metrics collection
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      # 15s scrape interval for sub-2 second response times
+      timeInterval: "15s"
+      # 30s timeout to prevent long-running queries
+      queryTimeout: "30s"
+      httpMethod: POST
+      # Link exemplars to trace data in Jaeger
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: jaeger
+
+  # Elasticsearch datasource for log aggregation
+  - name: Elasticsearch
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    # Dynamic index pattern for tech transfer logs
+    database: tech-transfer-logs-*
+    jsonData:
+      timeField: "@timestamp"
+      # Latest ES version for optimal performance
+      esVersion: "8.x.x"
+      # Optimize concurrent shard requests for better performance
+      maxConcurrentShardRequests: 5
+      # Log field mappings
+      logMessageField: "message"
+      logLevelField: "level"
+      # Daily index rotation for efficient log management
+      interval: "Daily"
+      # 1m interval for near real-time log aggregation
+      timeInterval: "1m"
+
+  # Jaeger datasource for distributed tracing
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger-query:16686
+    jsonData:
+      # Enable node graph visualization for service dependencies
+      nodeGraph:
+        enabled: true
+      # Configure trace-to-log correlation
+      tracesToLogs:
+        datasourceUid: elasticsearch
+        tags: ["service", "error"]
+        mappedTags:
+          - key: service.name
+            value: service
+          - key: error
+            value: error
