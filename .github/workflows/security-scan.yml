@@ -1,0 +1,168 @@
+name: Security Scan
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  push:
+    branches: 
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# Define required permissions
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+  pull-requests: read
+
+# Environment variables
+env:
+  SCAN_TIMEOUT: 360
+  NODE_VERSION: '16'
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ env.SCAN_TIMEOUT }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Snyk
+        uses: snyk/actions/setup@v3
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
+      - name: Scan Backend Dependencies
+        run: |
+          cd src/backend
+          snyk test --all-projects --severity-threshold=medium --sarif-file-output=backend-vulnerability.sarif
+        continue-on-error: true
+
+      - name: Scan Frontend Dependencies
+        run: |
+          cd src/web
+          snyk test --all-projects --severity-threshold=medium --sarif-file-output=frontend-vulnerability.sarif
+        continue-on-error: true
+
+      - name: Upload Snyk Backend Results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: src/backend/backend-vulnerability.sarif
+          category: snyk-backend
+
+      - name: Upload Snyk Frontend Results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: src/web/frontend-vulnerability.sarif
+          category: snyk-frontend
+
+  sast-analysis:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ env.SCAN_TIMEOUT }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript, typescript
+          queries: security-extended,security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          cd src/backend && npm ci
+          cd ../web && npm ci
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: codeql
+          upload: true
+
+      - name: Secret Scanning
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: ./.github/gitleaks/gitleaks.toml
+          report-format: sarif
+          report-path: gitleaks-report.sarif
+
+      - name: Upload Secret Scan Results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: gitleaks-report.sarif
+          category: secret-scan
+
+  security-report:
+    name: Generate Security Report
+    needs: [dependency-scan, sast-analysis]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download Scan Results
+        uses: actions/download-artifact@v3
+        with:
+          path: scan-results
+
+      - name: Generate Consolidated Report
+        run: |
+          echo "# Security Scan Summary" > security-report.md
+          echo "## Scan Results" >> security-report.md
+          echo "### Dependency Vulnerabilities" >> security-report.md
+          cat scan-results/*vulnerability.sarif >> security-report.md
+          echo "### SAST Analysis" >> security-report.md
+          cat scan-results/codeql-results.sarif >> security-report.md
+          echo "### Secret Scanning" >> security-report.md
+          cat scan-results/gitleaks-report.sarif >> security-report.md
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.md
+          retention-days: 90
+
+      - name: Check for Critical Issues
+        if: ${{ failure() }}
+        run: |
+          echo "::error::Critical security issues detected. Please review the security report."
+          exit 1
