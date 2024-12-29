@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Character encoding and viewport configuration -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+
+    <!-- Primary meta tags -->
+    <meta name="theme-color" content="#ffffff">
+    <meta name="description" content="Technology Transfer Data Aggregation and Grant-Writing Assistance System - Discover and pursue innovation opportunities across global institutions">
+    <meta name="keywords" content="technology transfer, grant writing, research commercialization, innovation, universities, federal labs">
+    <meta name="author" content="Technology Transfer Platform">
+    <meta name="application-name" content="Tech Transfer Platform">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Technology Transfer Data Platform">
+    <meta property="og:description" content="Comprehensive technology transfer and grant-writing platform for global innovation opportunities">
+    <meta property="og:type" content="website">
+
+    <!-- Security headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.example.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.example.com; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+
+    <!-- Resource hints for performance optimization -->
+    <link rel="preconnect" href="https://api.example.com">
+    <link rel="dns-prefetch" href="https://analytics.example.com">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/src/assets/styles/global.css">
+
+    <title>Technology Transfer Data Platform</title>
+</head>
+<body>
+    <!-- Skip link for accessibility -->
+    <a href="#main-content" class="skip-link">
+        Skip to main content
+    </a>
+
+    <!-- Application root with ARIA landmarks -->
+    <div id="root">
+        <!-- React application mount point -->
+        <noscript>
+            <div role="alert" class="noscript-message">
+                JavaScript must be enabled to use this application.
+            </div>
+        </noscript>
+    </div>
+
+    <!-- Application entry point -->
+    <script type="module" src="/src/index.tsx"></script>
+
+    <!-- Performance monitoring -->
+    <script>
+        // Performance metrics collection
+        if (window.performance && process.env.NODE_ENV === 'production') {
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    const timing = window.performance.timing;
+                    const metrics = {
+                        loadTime: timing.loadEventEnd - timing.navigationStart,
+                        domReady: timing.domContentLoadedEventEnd - timing.navigationStart,
+                        firstPaint: performance.getEntriesByType('paint')[0]?.startTime
+                    };
+                    // Send metrics to analytics service
+                    console.debug('Performance metrics:', metrics);
+                }, 0);
+            });
+        }
+    </script>
+</body>
+</html>
