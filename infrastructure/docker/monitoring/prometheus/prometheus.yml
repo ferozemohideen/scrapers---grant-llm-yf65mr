@@ -1,0 +1,84 @@
+# Prometheus configuration file v2.45.0
+# Configures comprehensive metrics collection for the technology transfer data aggregation system
+# Optimized for sub-2 second response time and 99.9% uptime monitoring
+
+global:
+  # Default scrape interval for all jobs
+  scrape_interval: 15s
+  # How frequently to evaluate rules
+  evaluation_interval: 15s
+  # Global scrape timeout
+  scrape_timeout: 10s
+  # External labels added to any time series or alerts
+  external_labels:
+    environment: production
+    region: us-east-1
+
+# Scrape configurations for all monitored targets
+scrape_configs:
+  # Self-monitoring of Prometheus server
+  - job_name: prometheus
+    honor_labels: true
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: prometheus
+
+  # API Gateway monitoring with higher frequency for latency tracking
+  - job_name: api-gateway
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ['api-gateway:3000']
+        labels:
+          service: api-gateway
+
+  # Search service monitoring optimized for performance metrics
+  - job_name: search-service
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ['search:8001']
+        labels:
+          service: search
+
+  # Scraper service monitoring with longer interval due to batch nature
+  - job_name: scraper-service
+    metrics_path: /metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['scraper:8000']
+        labels:
+          service: scraper
+
+  # Grant service monitoring for proposal generation tracking
+  - job_name: grant-service
+    metrics_path: /metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['grant:8002']
+        labels:
+          service: grant
+
+  # Node exporter for host-level metrics
+  - job_name: node-exporter
+    metrics_path: /metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: node-exporter
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 5s
+      api_version: v2
+
+# Rules files to be loaded
+rule_files:
+  - /etc/prometheus/rules/*.yml
