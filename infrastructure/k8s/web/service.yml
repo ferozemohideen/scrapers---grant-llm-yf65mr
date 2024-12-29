@@ -1,0 +1,44 @@
+# Service configuration for web frontend application
+# Provides internal cluster access and load balancing for web pods
+# Version: 1.0
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: web-service
+  namespace: tech-transfer
+  labels:
+    app: web
+    environment: production
+    component: frontend
+    managed-by: kubernetes
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/metrics"
+    service.kubernetes.io/topology-aware-hints: "auto"
+
+spec:
+  # Using ClusterIP for internal-only access within the cluster
+  type: ClusterIP
+  
+  # Port configuration for HTTP traffic
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http-web
+  
+  # Pod selector matching deployment labels
+  selector:
+    app: web
+    component: frontend
+  
+  # Load balancing configuration
+  sessionAffinity: None
+  internalTrafficPolicy: Cluster
+  
+  # IP configuration
+  ipFamilyPolicy: SingleStack
+  ipFamilies:
+    - IPv4
