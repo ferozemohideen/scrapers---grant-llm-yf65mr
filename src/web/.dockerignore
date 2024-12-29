@@ -1,0 +1,95 @@
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist
+build
+.next
+out
+*.tsbuildinfo
+
+# Test and coverage
+coverage
+.nyc_output
+**/__tests__
+**/*.test.*
+**/*.spec.*
+jest.config.*
+
+# Development tools and IDE
+.vscode
+.idea
+*.sublime-*
+.DS_Store
+.editorconfig
+
+# Source control
+.git
+.gitignore
+.gitattributes
+
+# Environment and secrets
+.env*
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Configuration files
+.eslintrc*
+.prettierrc*
+.stylelintrc*
+tsconfig*.json
+babel.config.*
+postcss.config.*
+tailwind.config.*
+
+# Documentation
+*.md
+LICENSE
+AUTHORS
+CHANGELOG
+docs
+
+# Development assets
+.storybook
+**/*.stories.*
+**/__mocks__
+**/__fixtures__
+.husky
+.github
+
+# Debug files
+**/*.map
+**/*.log
+
+# Temporary files
+.tmp
+.temp
+.cache
+
+# OS generated
+**/.DS_Store
+**/Thumbs.db
+**/desktop.ini
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npmrc
+.yarnrc
+.pnpmrc
+
+# Docker files (prevent recursion)
+Dockerfile*
+.dockerignore
+
+# Misc development files
+.browserslistrc
+.nvmrc
+.tool-versions
+.node-version
