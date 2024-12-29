@@ -1,0 +1,22 @@
+{
+  "watch": [
+    "src/**/*.ts"
+  ],
+  "ignore": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts", 
+    "src/tests/**/*",
+    "src/**/__tests__/**/*",
+    "src/**/__mocks__/**/*"
+  ],
+  "ext": ".ts,.js,.json",
+  "exec": "ts-node --project ./tsconfig.json ./src/server.ts",
+  "verbose": true,
+  "delay": 2000,
+  "legacyWatch": true,
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_PROJECT": "./tsconfig.json",
+    "TS_NODE_TRANSPILE_ONLY": "true"
+  }
+}
