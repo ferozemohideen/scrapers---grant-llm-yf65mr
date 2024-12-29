@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  namespace: tech-transfer
+  labels:
+    app: web
+    environment: production
+    tier: frontend
+    version: latest
+  annotations:
+    kubernetes.io/change-cause: "Initial production deployment"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/metrics"
+    deployment.kubernetes.io/revision: "1"
+
+spec:
+  # High availability with 3 initial replicas
+  replicas: 3
+
+  # Zero-downtime rolling update strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  # Pod selector for the deployment
+  selector:
+    matchLabels:
+      app: web
+      tier: frontend
+
+  template:
+    metadata:
+      labels:
+        app: web
+        environment: production
+        tier: frontend
+        version: latest
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+
+    spec:
+      # Pod security context
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+
+      # Graceful shutdown period
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: web
+          image: tech-transfer/web:latest
+          imagePullPolicy: Always
+
+          # Container ports
+          ports:
+            - containerPort: 80
+              protocol: TCP
+              name: http
+
+          # Resource requests and limits for performance optimization
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # Liveness probe for container health monitoring
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          # Readiness probe for traffic routing
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          # Startup probe for initialization
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+
+          # Environment configuration from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: web-config
+
+          # Container security context
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
