@@ -7,9 +7,9 @@
 
 import { Injectable, Logger, Cache } from '@nestjs/common'; // ^8.0.0
 import { CircuitBreaker } from '@nestjs/common'; // ^8.0.0
-import { IProposal, ProposalStatus, IProposalGeneration, IProposalEnhancement } from '../../interfaces/grant.interface';
-import { ProposalRepository } from '../../db/repositories/proposal.repository';
-import { GPT4Service } from '../../lib/ai/gpt4.service';
+import { IProposal, ProposalStatus, IProposalGeneration, IProposalEnhancement } from '../interfaces/grant.interface';
+import { ProposalRepository } from '../db/repositories/proposal.repository';
+import { GPT4Service } from '../lib/ai/gpt4.service';
 
 @Injectable()
 export class GrantService {

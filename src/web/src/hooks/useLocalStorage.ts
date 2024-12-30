@@ -239,7 +239,7 @@ This implementation provides a robust and secure local storage hook with the fol
 
 The hook can be used like this:
 
-```typescript
+```
 // Example usage
 const [value, setValue, remove, error] = useLocalStorage<UserPreferences>(
     'user_preferences',

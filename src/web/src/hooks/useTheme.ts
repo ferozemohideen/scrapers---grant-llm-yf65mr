@@ -172,22 +172,4 @@ This implementation provides a robust theme management system with the following
 
 The hook can be used in components like this:
 
-```typescript
-const MyComponent = () => {
-    const { theme, isDarkMode, setTheme } = useTheme();
-
-    return (
-        <div>
-            <p>Current theme: {theme}</p>
-            <p>Dark mode: {isDarkMode ? 'Yes' : 'No'}</p>
-            <select 
-                value={theme} 
-                onChange={(e) => setTheme(e.target.value as Theme)}
-            >
-                <option value={Theme.LIGHT}>Light</option>
-                <option value={Theme.DARK}>Dark</option>
-                <option value={Theme.SYSTEM}>System</option>
-            </select>
-        </div>
-    );
-};
+```

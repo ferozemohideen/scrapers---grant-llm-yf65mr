@@ -1,9 +1,9 @@
 /**
  * ThemeContext
- * 
+ *
  * React context provider for managing global theme state with support for
  * light/dark modes, system preference detection, persistence, and accessibility features.
- * 
+ *
  * @version 1.0.0
  * @package react ^18.0.0
  */
@@ -37,19 +37,17 @@ export const ThemeContext = createContext<ThemeContextType | undefined>(undefine
  */
 export const useThemeContext = (): ThemeContextType => {
   const context = useContext(ThemeContext);
-  
+
   if (context === undefined) {
-    throw new Error(
-      'useThemeContext must be used within a ThemeProvider'
-    );
+    throw new Error('useThemeContext must be used within a ThemeProvider');
   }
-  
+
   return context;
 };
 
 /**
  * Memoized ThemeProvider component
- * 
+ *
  * Provides theme context to child components with system preference detection
  * and accessibility features including high contrast support.
  */
@@ -70,28 +68,23 @@ export const ThemeProvider = memo(({ children }: ThemeProviderProps) => {
   // Set accessibility-related attributes
   React.useEffect(() => {
     const root = document.documentElement;
-    
+
     // Update ARIA theme attribute
     root.setAttribute('data-theme', theme);
-    
+
     // Set color scheme for system-level accessibility
     root.style.setProperty('color-scheme', isDarkMode ? 'dark' : 'light');
-    
+
     // Set high contrast mode class if needed
     const isHighContrast = window.matchMedia('(forced-colors: active)').matches;
     root.classList.toggle('high-contrast', isHighContrast);
-    
+
     // Set reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     root.classList.toggle('reduced-motion', prefersReducedMotion);
-    
   }, [theme, isDarkMode]);
 
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 });
 
 // Set display name for debugging
@@ -138,15 +131,15 @@ This implementation provides a robust theme management system with the following
 
 The context can be used in components like this:
 
-```typescript
+```;
 const MyComponent = () => {
   const { theme, isDarkMode, setTheme } = useThemeContext();
-  
+
   return (
     <div>
-      <select 
+      <select
         value={theme}
-        onChange={(e) => setTheme(e.target.value as Theme)}
+        onChange={e => setTheme(e.target.value as Theme)}
         aria-label="Select theme"
       >
         <option value={Theme.LIGHT}>Light</option>
